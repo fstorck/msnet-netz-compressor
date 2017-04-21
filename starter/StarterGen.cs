@@ -250,104 +250,211 @@ namespace netz.starter
 			Utils.WriteTextFile("starter.cs", starterTemplate);
 		}
 
+
+
+        void CompileCU_New(bool console, string resourceFile, CodeCompileUnit cu)
+        {
+            CodeDomProvider        cdp = CodeDomProvider.CreateProvider("CSharp");
+            CompilerParameters options = new CompilerParameters();
+
+            options.ReferencedAssemblies.Add(genData.ZipDllName);
+            // required
+            options.ReferencedAssemblies.Add("System.dll");
+            if (genData.IsService)
+            {
+                //options.ReferencedAssemblies.Add("System.Configuration.dll");
+                options.ReferencedAssemblies.Add("System.Configuration.Install.dll");
+                options.ReferencedAssemblies.Add("System.ServiceProcess.dll");
+            }
+            if (!console)
+            {
+                options.ReferencedAssemblies.Add("System.Windows.Forms.dll");
+            }
+            options.GenerateExecutable = true;
+            options.OutputAssembly = OutDirMan.MakeOutFileName(genData.ExeFileName);
+            options.CompilerOptions += "/res:\"" + resourceFile + "\"";
+            if (!console)
+            {
+                options.CompilerOptions += " /target:winexe";
+            }
+            if (genData.XPlatform != null)
+            {
+                options.CompilerOptions += " /platform:" + genData.XPlatform; //"x86";
+            }
+            if (genData.IconFile != null)
+            {
+                options.CompilerOptions += MakeIconArg(true);
+            }
+            if (genData.LicenseResourceFile != null)
+            {
+                options.CompilerOptions += MakeLicArg(true);
+            }
+            if ((genData.OtherCompOptions != null) && (genData.OtherCompOptions.Length > 0))
+            {
+                options.CompilerOptions += " " + genData.OtherCompOptions;
+            }
+
+            CompilerResults cr = cdp.CompileAssemblyFromDom(options, cu);
+
+            if (cr.Errors.Count > 0)
+            {
+                StringBuilder sb = new StringBuilder();
+                Logger.Log("\r\n# NetzStarter compilation errors:\r\n");
+                foreach (CompilerError err in cr.Errors)
+                {
+                    string t = err.ErrorNumber + " " + err.ErrorText + " " + err.FileName + " L:" + err.Line + " C:" + err.Column;
+                    sb.Append(t).Append(Environment.NewLine);
+                    Logger.Log("  " + t);
+                }
+                sb.Append(Environment.NewLine);
+                sb.Append(((CodeSnippetCompileUnit)cu).Value);
+                if (sb.Length > 0)
+                {
+                    try
+                    {
+                        string errFile = "error.txt";
+                        sb.Append(Environment.NewLine).Append(".NETZ Version: ").Append(System.Reflection.Assembly.GetExecutingAssembly().FullName);
+                        sb.Append(Environment.NewLine).Append(".NET  Version: ").Append(Environment.Version.ToString());
+                        sb.Append(Environment.NewLine).Append(netz.InputParser.GetInnerTemplatesFingerPrint(this.genData.CompressProviderDLL));
+                        sb.Append(Environment.NewLine).Append(Environment.StackTrace);
+                        sb.Append(Environment.NewLine).Append(DateTime.Now.ToString());
+                        sb.Append(Environment.NewLine);
+
+                        Utils.WriteTextFile(errFile, sb.ToString());
+                        Logger.Log(string.Empty);
+                        errFile = OutDirMan.MakeOutFileName("error.txt");
+                        ColorConsole c = null;
+                        try
+                        {
+                            c = new ColorConsole();
+                            c.SetColor(ColorConsole.FOREGROUND_RED | ColorConsole.FOREGROUND_INTENSITY);
+                        }
+                        catch { }
+
+                        Logger.Log("! Please email the error file: " + errFile);
+                        Logger.Log("! To: " + Help.EMAIL);
+
+
+
+                        Logger.Log(string.Empty);
+                        Logger.Log("! To help locate better the errors add the -v option to");
+                        Logger.Log("! your current netz command-line and email also the screen output!");
+                        Logger.Log("! No support is provided for custom startup and compress templates!");
+                        Logger.Log("! Check http://madebits.com/netz/ for more help on how to report a bug!");
+
+                        try
+                        {
+                            if (c != null) c.Reset();
+                        }
+                        catch { }
+                        //TODO send email
+                    }
+                    catch { }
+                }
+            }
+        }
+
 		private void CompileCU(bool console, string resourceFile, CodeCompileUnit cu)
 		{
-			CSharpCodeProvider p = new CSharpCodeProvider();
-			ICodeCompiler cc = p.CreateCompiler();
-			CompilerParameters options = new CompilerParameters();
-			options.ReferencedAssemblies.Add(genData.ZipDllName);
-			// required
-			options.ReferencedAssemblies.Add("System.dll");
-			if(genData.IsService)
-			{
-				//options.ReferencedAssemblies.Add("System.Configuration.dll");
-				options.ReferencedAssemblies.Add("System.Configuration.Install.dll");
-				options.ReferencedAssemblies.Add("System.ServiceProcess.dll");
-			}
-			if(!console)
-			{
-				options.ReferencedAssemblies.Add("System.Windows.Forms.dll");
-			}
-			options.GenerateExecutable = true;
-			options.OutputAssembly = OutDirMan.MakeOutFileName(genData.ExeFileName);
-			options.CompilerOptions += "/res:\"" + resourceFile + "\"";
-			if(!console)
-			{
-				options.CompilerOptions += " /target:winexe";
-			}
-			if(genData.XPlatform !=  null)
-			{
-				options.CompilerOptions += " /platform:" + genData.XPlatform; //"x86";
-			}
-			if(genData.IconFile != null)
-			{
-				options.CompilerOptions += MakeIconArg(true);
-			}
-			if(genData.LicenseResourceFile != null)
-			{
-				options.CompilerOptions += MakeLicArg(true);
-			}
-			if((genData.OtherCompOptions != null) && (genData.OtherCompOptions.Length > 0))
-			{
-				options.CompilerOptions += " " +  genData.OtherCompOptions;
-			}
-			CompilerResults cr = cc.CompileAssemblyFromDom(options, cu);
-			if(cr.Errors.Count > 0)
-			{
-				StringBuilder sb = new StringBuilder();
-				Logger.Log("\r\n# NetzStarter compilation errors:\r\n");
-				foreach(CompilerError err in cr.Errors)
-				{
-					string t = err.ErrorNumber + " " + err.ErrorText + " " + err.FileName + " L:" + err.Line + " C:" + err.Column;
-					sb.Append(t).Append(Environment.NewLine);
-					Logger.Log("  " + t);
-				}
-				sb.Append(Environment.NewLine);
-				sb.Append(((CodeSnippetCompileUnit)cu).Value);
-				if(sb.Length > 0)
-				{
-					try
-					{
-						string errFile = "error.txt";
-						sb.Append(Environment.NewLine).Append(".NETZ Version: ").Append(System.Reflection.Assembly.GetExecutingAssembly().FullName);
-						sb.Append(Environment.NewLine).Append(".NET  Version: ").Append(Environment.Version.ToString());
-						sb.Append(Environment.NewLine).Append(netz.InputParser.GetInnerTemplatesFingerPrint(this.genData.CompressProviderDLL));
-						sb.Append(Environment.NewLine).Append(Environment.StackTrace);
-						sb.Append(Environment.NewLine).Append(DateTime.Now.ToString());
-						sb.Append(Environment.NewLine);
 
-						Utils.WriteTextFile(errFile, sb.ToString());
-						Logger.Log(string.Empty);
-						errFile = OutDirMan.MakeOutFileName("error.txt");
-						ColorConsole c = null;
-						try
-						{
-							c = new ColorConsole();
-							c.SetColor(ColorConsole.FOREGROUND_RED | ColorConsole.FOREGROUND_INTENSITY);
-						}
-						catch{}
+            CompileCU_New(console, resourceFile, cu);
 
-						Logger.Log("! Please email the error file: " + errFile);
-						Logger.Log("! To: " + Help.EMAIL);
+			//CSharpCodeProvider p = new CSharpCodeProvider();
+			//ICodeCompiler cc = p.CreateCompiler();
+			//CompilerParameters options = new CompilerParameters();
+			//options.ReferencedAssemblies.Add(genData.ZipDllName);
+			//// required
+			//options.ReferencedAssemblies.Add("System.dll");
+			//if(genData.IsService)
+			//{
+			//	//options.ReferencedAssemblies.Add("System.Configuration.dll");
+			//	options.ReferencedAssemblies.Add("System.Configuration.Install.dll");
+			//	options.ReferencedAssemblies.Add("System.ServiceProcess.dll");
+			//}
+			//if(!console)
+			//{
+			//	options.ReferencedAssemblies.Add("System.Windows.Forms.dll");
+			//}
+			//options.GenerateExecutable = true;
+			//options.OutputAssembly = OutDirMan.MakeOutFileName(genData.ExeFileName);
+			//options.CompilerOptions += "/res:\"" + resourceFile + "\"";
+			//if(!console)
+			//{
+			//	options.CompilerOptions += " /target:winexe";
+			//}
+			//if(genData.XPlatform !=  null)
+			//{
+			//	options.CompilerOptions += " /platform:" + genData.XPlatform; //"x86";
+			//}
+			//if(genData.IconFile != null)
+			//{
+			//	options.CompilerOptions += MakeIconArg(true);
+			//}
+			//if(genData.LicenseResourceFile != null)
+			//{
+			//	options.CompilerOptions += MakeLicArg(true);
+			//}
+			//if((genData.OtherCompOptions != null) && (genData.OtherCompOptions.Length > 0))
+			//{
+			//	options.CompilerOptions += " " +  genData.OtherCompOptions;
+			//}
+			//CompilerResults cr = cc.CompileAssemblyFromDom(options, cu);
+			//if(cr.Errors.Count > 0)
+			//{
+			//	StringBuilder sb = new StringBuilder();
+			//	Logger.Log("\r\n# NetzStarter compilation errors:\r\n");
+			//	foreach(CompilerError err in cr.Errors)
+			//	{
+			//		string t = err.ErrorNumber + " " + err.ErrorText + " " + err.FileName + " L:" + err.Line + " C:" + err.Column;
+			//		sb.Append(t).Append(Environment.NewLine);
+			//		Logger.Log("  " + t);
+			//	}
+			//	sb.Append(Environment.NewLine);
+			//	sb.Append(((CodeSnippetCompileUnit)cu).Value);
+			//	if(sb.Length > 0)
+			//	{
+			//		try
+			//		{
+			//			string errFile = "error.txt";
+			//			sb.Append(Environment.NewLine).Append(".NETZ Version: ").Append(System.Reflection.Assembly.GetExecutingAssembly().FullName);
+			//			sb.Append(Environment.NewLine).Append(".NET  Version: ").Append(Environment.Version.ToString());
+			//			sb.Append(Environment.NewLine).Append(netz.InputParser.GetInnerTemplatesFingerPrint(this.genData.CompressProviderDLL));
+			//			sb.Append(Environment.NewLine).Append(Environment.StackTrace);
+			//			sb.Append(Environment.NewLine).Append(DateTime.Now.ToString());
+			//			sb.Append(Environment.NewLine);
+
+			//			Utils.WriteTextFile(errFile, sb.ToString());
+			//			Logger.Log(string.Empty);
+			//			errFile = OutDirMan.MakeOutFileName("error.txt");
+			//			ColorConsole c = null;
+			//			try
+			//			{
+			//				c = new ColorConsole();
+			//				c.SetColor(ColorConsole.FOREGROUND_RED | ColorConsole.FOREGROUND_INTENSITY);
+			//			}
+			//			catch{}
+
+			//			Logger.Log("! Please email the error file: " + errFile);
+			//			Logger.Log("! To: " + Help.EMAIL);
 
 						
 
-						Logger.Log(string.Empty);
-						Logger.Log("! To help locate better the errors add the -v option to");
-						Logger.Log("! your current netz command-line and email also the screen output!");
-						Logger.Log("! No support is provided for custom startup and compress templates!");
-						Logger.Log("! Check http://madebits.com/netz/ for more help on how to report a bug!");
+			//			Logger.Log(string.Empty);
+			//			Logger.Log("! To help locate better the errors add the -v option to");
+			//			Logger.Log("! your current netz command-line and email also the screen output!");
+			//			Logger.Log("! No support is provided for custom startup and compress templates!");
+			//			Logger.Log("! Check http://madebits.com/netz/ for more help on how to report a bug!");
 
-						try
-						{
-							if(c != null) c.Reset();
-						}
-						catch{}
-						//TODO send email
-					}
-					catch{}
-				}
-			}
+			//			try
+			//			{
+			//				if(c != null) c.Reset();
+			//			}
+			//			catch{}
+			//			//TODO send email
+			//		}
+			//		catch{}
+			//	}
+			//}
 		}
 
 		private string MakeIconArg(bool includePath)
