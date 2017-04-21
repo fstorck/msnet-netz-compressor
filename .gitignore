@@ -6,6 +6,7 @@
 *.user
 *.userosscache
 *.sln.docstates
+*.vs
 
 # Build results
 [Dd]ebug/
@@ -59,6 +60,10 @@ dlldata.c
 *.pidb
 *.svclog
 *.scc
+
+netz-bin
+*.netz
+test.*
 
 # Chutzpah Test files
 _Chutzpah*

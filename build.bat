@@ -1,6 +1,6 @@
 @ECHO OFF
-SET NCSC=csc
-REM SET NCSC=csc /platform:x86
+REM SET NCSC=csc
+SET NCSC=csc /platform:x86
 
 %NCSC% setversion.cs
 

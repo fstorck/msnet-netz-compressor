@@ -363,7 +363,7 @@ namespace netz
 				try
 				{
 					int ss = subsys.Win32PESubSystem.GetSubSystem(pfile);
-					if(ss == subsys.Win32PESubSystem.IMAGE_SUBSYSTEM_WINDOWS_CUI)
+                    if (ss == subsys.Win32PESubSystem.IMAGE_SUBSYSTEM_WINDOWS_CUI)
 					{
 						genData.Console = true;
 					}
@@ -376,7 +376,7 @@ namespace netz
 				}
 				catch(Exception ex)
 				{
-					netz.Netz.PrintWarning("1004 Cannot determine EXE's subsystem (default is GUI windows EXE) The packed application will fail!: ", ex);
+                    netz.Netz.PrintWarning("1004 Cannot determine EXE's subsystem (default is GUI windows EXE) The packed application will fail!: ", ex);
 				}
 			}
 			OutDirMan.OutDir = pfile + ".netz";
